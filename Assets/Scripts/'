@@ -1,0 +1,73 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+
+public class PlayerController : MonoBehaviour
+{
+
+    public float speed = 3.0f; 
+    public GameObject bulletPrefab;
+
+    Rigidbody2D rigidbody2d;
+    Vector2 lookDirection = new Vector2(1,0);
+
+
+    void Start()
+    {
+        rigidbody2d = GetComponent<Rigidbody2D>(); 
+    }
+
+    void Update()
+    {
+        // Input Moving 
+        float horizontal = Input.GetAxis("Horizontal");
+        float vertical = Input.GetAxis("Vertical");
+
+        Vector2 move = new Vector2(horizontal, vertical);
+
+        if (!Mathf.Approximately(move.x, 0.0f) || !Mathf.Approximately(move.x, 0.0f))
+        {
+            lookDirection.Set(move.x, move.y);
+            lookDirection.Normalize();
+        }
+
+        Vector2 position = rigidbody2d.position;
+        position = position + move * speed * Time.deltaTime;
+
+        rigidbody2d.MovePosition(position);
+
+        // Looking at the mouse
+        var direction = Camera.main.WorldToScreenPoint(position) - Input.mousePosition;
+        var angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        rigidbody2d.transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
+
+        // Fire Bullet
+        if (Input.GetButtonDown("Fire1"))
+        {
+            Launch();
+        }
+    }
+
+    void OnCollisionEnter2D(Collision2D other)
+    {
+        EnemyController enemy = other.gameObject.GetComponent<EnemyController>();
+       if (enemy != null)
+       {
+           GetKilled();
+       } 
+    }
+
+    public void GetKilled()
+    {
+        Destroy(gameObject);
+    }
+
+    public void Launch()
+    {
+        GameObject bulletPrefab = Instantiate(bulletPrefab, rigidbody2d.position + Vector2.up * 0.5f, Quaternion.identity);
+        BulletController bullet = bulletPrefab.GetComponent<BulletController>();
+        bullet.Launch(lookDirection, 300);
+    }
+
+}
