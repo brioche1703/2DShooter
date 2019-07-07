@@ -55,6 +55,7 @@ public class PersistentManagerScript : MonoBehaviour
     // Initialisation of game variables
     void InitGame()
     {
+        autopilot = false;
         p_lives = 3;
         p_startingHealth = 100;
         p_startingShieldCapacity = 40;
