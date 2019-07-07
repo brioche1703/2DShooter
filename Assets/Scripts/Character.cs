@@ -4,156 +4,181 @@ using UnityEngine;
 
 public class Character : MonoBehaviour
 {
-    
-    // Character caracteristics 
-    // Starting
-    protected int startingHealth = 100;
 
+    // Default caracteristics 
+    protected int startingHealth = 100;
+    
     protected int startingShield = 40;
     protected int shieldRecoverSpeed = 1;
-    protected float shieldRecoverRate = 2.0f;
+    protected float shieldRecoverRate = 10.0f;
 
-    protected int startingRocketsNumber = 3;
-
-    protected int startingLifeNumber = 3;
-
+    public int bulletDamage = 30;
+    public int bulletSpeed = 100;
+    public int rocketDamage = 50;
+    public int rocketSpeed = 150;
     protected int collisionDamage = 10;
+    float collisionPvPMagnitude = 2.0f;
+    float collisionPvEMagnitude = 0.1f;
 
     public float speed = 3.0f; 
     // Current
-    protected int lives;
     protected int health;
     protected int shield;
-    protected int leftRockets;
+    protected bool isLastEnemyDamageFromPlayer = false;
     
-    // Timers & conditions
-    protected float shieldRecoverTimer = 0.0f;
-    protected float shieldRecoverRateTimer = 0.0f;
-    protected bool isShieldRecovering = true;
+    // Timers
+    protected SimpleTimer bouncingTimer;
+    protected SimpleTimer shieldRecoverTimer;
+    protected SimpleTimer shieldRecoverRateTimer;
+    
+    // Timer Durations
+    protected float bouncingDuration = 2.0f; 
+    protected float shieldRecoverTimeDuration = 10.0f;
+    protected float shieldRecoverRateDuration = 0.5f;
+
 
     // Other
     public GameObject bulletPrefab;
+    public GameObject rocketPrefab;
     public HealthBar healthBar;
     public ShieldBar shieldBar;
     protected Rigidbody2D rigidbody2d;
 
     protected Vector2 lookDirection = new Vector2(1,0);
+    protected Quaternion lookRotation = Quaternion.identity;
 
     // UI
     protected Vector3 healthBarOffset;
     protected Vector3 shieldBarOffset;
 
-    // Bouncing collision
-    protected float bouncingTimer = 0.0f; 
-    protected float bouncingTime = 2.0f; 
+    protected virtual void Awake()
+    {
+        rigidbody2d = GetComponent<Rigidbody2D>();
+        // Timers
+        bouncingTimer = gameObject.AddComponent<SimpleTimer>(); 
+        shieldRecoverTimer = gameObject.AddComponent<SimpleTimer>(); 
+        shieldRecoverRateTimer = gameObject.AddComponent<SimpleTimer>(); 
+    }
 
     protected virtual void Start()
     {
-        rigidbody2d = GetComponent<Rigidbody2D>();
         health = startingHealth;
         shield = startingShield;
         healthBarOffset = -(transform.position - healthBar.transform.position);
         shieldBarOffset = -(transform.position - shieldBar.transform.position);
+   
     }
 
     protected virtual void Update()
     {
-        UpdateBars();
-        RecoverShield();
-
-        bouncingTimer -= Time.deltaTime;
-        if (bouncingTimer <= 0.0f)
+        if (isDead())
         {
-            rigidbody2d.velocity = Vector3.zero;
-            rigidbody2d.angularVelocity = 0.0f;
+            GetDestroy();
         }
-        
-        isLevelCleared();
-
     }
 
-    void isLevelCleared()
-    {
-        // Check if level is won
-        if (PersistentManagerScript.Instance.enemiesNumber <= 0)
-        {
-            PersistentManagerScript.Instance.Win();
-        }
-
-    }
-    
     void OnCollisionEnter2D(Collision2D other)
     {
-        bouncingTimer = bouncingTime;
+        bouncingTimer.StartTimer(bouncingDuration);
+
         Character enemy = other.gameObject.GetComponent<Character>();
+
+        Vector2 direction;
+        float collisionMagnitude;
         if (enemy != null)
         {
-            GetDamaged(collisionDamage, enemy);
-        }
-            
-        Vector2 direction = new Vector2(enemy.transform.position.x,
+            isLastEnemyDamageFromPlayer = enemy.isPlayer();
+            direction = new Vector2(enemy.transform.position.x,
                 enemy.transform.position.y) - rigidbody2d.position;
-        rigidbody2d.AddForce(-direction * 2.0f, ForceMode2D.Impulse);
+            collisionMagnitude = collisionPvPMagnitude;
+        }
+        else
+        {
+            direction = rigidbody2d.position - Vector2.zero;
+            collisionMagnitude = collisionPvEMagnitude;
+        }
+        rigidbody2d.velocity = Vector2.zero;
+        rigidbody2d.angularVelocity = 0.0f;
+        rigidbody2d.AddForce(-direction * collisionMagnitude, ForceMode2D.Impulse);
+        GetDamaged(collisionDamage);
+    }
+
+    protected bool isBouncing()
+    {
+        return !bouncingTimer.isFinished();
     }
 
     protected bool isDead()
     {
         return health <= 0;
     }
-    
+
     public virtual void GetDestroy()
     {
         Destroy(gameObject);
     }
-    
-    public void GetDamaged(int damage, Character enemy)
+
+    public void GetDamaged(int damage)
     {
         shield -= damage;
-        shieldRecoverTimer = 5.0f;
+        shieldRecoverTimer.StartTimer(shieldRecoverTimeDuration);
+        
         if (shield <= 0)
         {
             health -= damage - shield;
             shield = 0;
         }
-        if (isDead())
+    }
+    public void GetDamaged(int damage, Character enemy)
+    {
+        isLastEnemyDamageFromPlayer = enemy.isPlayer();
+        Debug.Log("DMG from Player? " + isLastEnemyDamageFromPlayer);
+        shield -= damage;
+        shieldRecoverTimer.StartTimer(shieldRecoverTimeDuration);
+        
+        if (shield <= 0)
         {
-            PlayerController player = enemy.GetComponent<PlayerController>();
-            if (player != null)
-            {
-                this.GetDestroy();
-            }
-            else 
-            {
-                this.GetDestroy();
-            }
+            health -= damage - shield;
+            shield = 0;
         }
     }
 
-    void RecoverShield()
+    public void LaunchBullet()
     {
-        // Recover Shield
-        shieldRecoverTimer -= Time.deltaTime;
+        GameObject bulletObject = Instantiate(bulletPrefab, rigidbody2d.position + lookDirection * new Vector2(0.5f, 0.5f), Quaternion.identity);
+        BulletController bullet = bulletObject.GetComponent<BulletController>();
+        bullet.SetLauncherGameObject(this);
+        bullet.SetBulletDamage(bulletDamage);
+        bullet.Launch(lookDirection, bulletSpeed);
+    }
 
-        if (shieldRecoverTimer <= 0)
+    public void LaunchRocket()
+    {
+        GameObject rocketObject = Instantiate(rocketPrefab, rigidbody2d.position + lookDirection * new Vector2(0.5f, 0.5f), lookRotation);
+        RocketController rocket = rocketObject.GetComponent<RocketController>();
+        rocket.SetLauncherGameObject(this);
+        rocket.SetRocketDamage(rocketDamage);
+        rocket.Launch(lookDirection, rocketSpeed);
+    }
+
+    public virtual void RecoverShield()
+    {
+        if (shieldRecoverTimer.isFinished())
         {
-            if (!isShieldRecovering)
+            // Small timer to avoid shield instant recover
+            if (shieldRecoverRateTimer.isFinished())
             {
-                isShieldRecovering = true;
-                shieldRecoverRateTimer = shieldRecoverRate;
+                shieldRecoverRateTimer.StartTimer(shieldRecoverRateDuration);
             }
-            shieldRecoverRateTimer -= Time.deltaTime;
-            if (shieldRecoverRateTimer <= 0)
+            else
+            {
                 shield = Mathf.Clamp(shield + 1, 0, startingShield);
+            }
         }    
-        else
-        {
-            isShieldRecovering = false;
-        }
     }
 
-    void UpdateBars()
-    {
-        healthBar.SetSize((float)health/(float)startingHealth);
-        shieldBar.SetSize((float)shield/(float)startingShield);
+    public virtual bool isPlayer() 
+    { 
+        return false;
     }
 }

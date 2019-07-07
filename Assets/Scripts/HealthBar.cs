@@ -7,7 +7,7 @@ public class HealthBar : MonoBehaviour
     
     private Transform bar;
 
-    private void Start()
+    private void Awake()
     {
         bar = transform.Find("Bar");
     }

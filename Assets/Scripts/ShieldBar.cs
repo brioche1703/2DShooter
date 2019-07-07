@@ -7,7 +7,7 @@ public class ShieldBar : MonoBehaviour
 
     private Transform bar;
 
-    void Start()
+    void Awake()
     {
         bar = transform.Find("Bar");    
     }

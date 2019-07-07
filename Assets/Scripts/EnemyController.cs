@@ -4,9 +4,8 @@ using UnityEngine;
 
 public class EnemyController : Character
 {
-
-    public float fireRate = 160.0f;
-    public float fireRateTimer;
+    SimpleTimer fireRateTimer;
+    float fireRateDuration = 2.0f;
 
     public GameObject coinPrefab;
 
@@ -14,16 +13,24 @@ public class EnemyController : Character
 
     List<GameObject> enemies = new List<GameObject>();    
 
+    public LevelSceneManager levelSceneManager;
+
     protected override void Start()
     {
         base.Start();
-        fireRateTimer = 0.1f;
+
+        fireRateTimer = gameObject.AddComponent<SimpleTimer>();
     }
 
     protected override void Update()
     {
+        // Needs to call GetDestroy here because if multiple collisions
+        // happen at the same time it will call GetDestroy too fast
         base.Update();
-        if (bouncingTimer <= 0.0f)
+        RecoverShield();
+        UpdateBars();
+
+        if (!isBouncing())
         {
             ProcessMovement();
             ProcessFire();
@@ -36,8 +43,6 @@ public class EnemyController : Character
         enemies.Clear();
         enemies.AddRange(GameObject.FindGameObjectsWithTag("Player"));
         enemies.Remove(gameObject);
-        if (enemies.Count == 0)
-            PersistentManagerScript.Instance.Loose();
 
         // Find closest enemy
         targetObject = FindClosestEnemy();
@@ -48,7 +53,7 @@ public class EnemyController : Character
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         rigidbody2d.transform.rotation = Quaternion.AngleAxis(angle - 90.0f,
                 Vector3.forward);
-        lookDirection.Set(-direction.x, -direction.y);
+        lookDirection.Set(direction.x, direction.y);
         lookDirection.Normalize();
 
         // Make enemy going towards the target
@@ -64,11 +69,10 @@ public class EnemyController : Character
     void ProcessFire()
     {
         // Fire Bullet
-        fireRateTimer -= Time.deltaTime;
-        if (fireRateTimer < 0)
+        if (fireRateTimer.isFinished())
         {
-            fireRateTimer = fireRate;
-            Launch();
+            fireRateTimer.StartTimer(fireRateDuration);
+            LaunchBullet();
         }
     }
 
@@ -90,14 +94,6 @@ public class EnemyController : Character
         return closestEnemy;
     }
 
-    public void Launch()
-    {
-        GameObject bulletObject = Instantiate(bulletPrefab, rigidbody2d.position - lookDirection * new Vector2(0.5f, 0.5f), Quaternion.identity);
-        BulletController bullet = bulletObject.GetComponent<BulletController>();
-        bullet.SetLauncherGameObject(this);
-        bullet.Launch(-lookDirection, 100);
-    }
-
     void RealeaseCoin()
     {
         Instantiate(coinPrefab, rigidbody2d.position, Quaternion.identity);
@@ -105,8 +101,24 @@ public class EnemyController : Character
 
     public override void GetDestroy()
     {
-        Destroy(gameObject);
-        PersistentManagerScript.Instance.enemiesNumber--;
+        if (isLastEnemyDamageFromPlayer)
+        {
+            PersistentManagerScript.Instance.enemiesInLevelKilled++;
+            PersistentManagerScript.Instance.score += 10;
+        }
         RealeaseCoin();
+        PersistentManagerScript.Instance.enemiesDead++;
+        Destroy(gameObject);
+    }
+
+    void UpdateBars()
+    {
+        healthBar.SetSize((float)health/(float)startingHealth);
+        shieldBar.SetSize((float)shield/(float)startingShield);
+    }
+
+    public override bool isPlayer()
+    {
+        return false;
     }
 }

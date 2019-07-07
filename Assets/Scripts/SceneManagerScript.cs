@@ -1,24 +1,12 @@
-﻿using UnityEngine;
-using UnityEngine.SceneManagement;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 public class SceneManagerScript : MonoBehaviour
 {
-    
-    // Menu Scene
-    public void StartGame()
-    {
-        PersistentManagerScript.Instance.StartGame();
-    }
 
-    public void QuitGame()
-    {
-        PersistentManagerScript.Instance.QuitGame();
-    }
-
-    // Game scene
     public void Win()
     {
-        PersistentManagerScript.Instance.enemiesNumber++;
         PersistentManagerScript.Instance.Win();
     }
 
@@ -26,4 +14,15 @@ public class SceneManagerScript : MonoBehaviour
     {
         PersistentManagerScript.Instance.Loose();
     }
+
+    public void StartGame()
+    {
+        PersistentManagerScript.Instance.StartGame();
+    }
+    
+    public void QuitGame()
+    {
+        PersistentManagerScript.Instance.QuitGame();
+    }
+
 }

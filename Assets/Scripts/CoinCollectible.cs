@@ -5,12 +5,18 @@ using UnityEngine;
 public class CoinCollectible : MonoBehaviour
 {
 
-    float lifeTimer = 3.0f;
+    SimpleTimer lifeTimer;
+    float lifeDuration = 3.0f;
+
+    void Awake()
+    {
+        lifeTimer = gameObject.AddComponent<SimpleTimer>();
+        lifeTimer.StartTimer(lifeDuration);
+    }
 
     void Update()
     {
-        lifeTimer -= Time.deltaTime;
-        if (lifeTimer <= 0.0f)
+        if (lifeTimer.isFinished())
         {
             Destroy(gameObject);
         }

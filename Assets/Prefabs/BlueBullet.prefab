@@ -96,7 +96,7 @@ Animator:
   m_GameObject: {fileID: 7000278074339114868}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: b2445e37f834ace4d84077bbebfe5f2b, type: 2}
+  m_Controller: {fileID: 9100000, guid: 41a460fec27eb794c8524b2c3e1367d5, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -154,4 +154,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13cd181cc8e4c524185450e04e81d163, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  bulletDamage: 7
